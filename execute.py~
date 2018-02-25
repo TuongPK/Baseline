@@ -44,7 +44,7 @@ if __name__ == '__main__':
     """ Sparsity parameters
     :param sparsity         : type of sparsity penalty
                                 1 - All layer
-                                2 - Penultimate layer
+				2 - Penultimate layer
                                 3 - None
     :param varied_coef      : sparsity coefficient
                                 1 - Random
@@ -84,7 +84,7 @@ if __name__ == '__main__':
                 evaluate(n_hidden_node=n_hidden_node, n_circuit=n_circuit,
                          learning_rate=learning_rate, n_epochs=n_epochs, momentum=momentum, batch_size=batch_size,
                          dataset=dataset,
-                         probability=probability[setup_id],
+                         drop_type=drop_type, probability=probability[setup_id],
                          sparsity=sparsity, varied_coef=varied_coef
                          )
             )

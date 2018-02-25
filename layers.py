@@ -9,7 +9,7 @@ class NonLinearLayer(object):
     """
 
     def __init__(self, input, n_in, n_out,
-                 drop_type, drop, train, probability,
+                 train, probability,
                  W=None, b=None, activation=T.tanh):
         self.input = input
 
@@ -44,21 +44,12 @@ class NonLinearLayer(object):
         )
 
         # Drop if being trained
-        # Reduced if being tested
-        if drop_type == 1:
-            srng = T.shared_randomstreams.RandomStreams()
-            mask = srng.binomial(n=1, p=1 - probability, size=output.shape)
+        srng = T.shared_randomstreams.RandomStreams()
+        mask = srng.binomial(n=1, p=1 - probability, size=output.shape)
 
-            self.output = T.switch(T.neq(train, 0),
-                                   output * T.cast(mask, theano.config.floatX),  # drop according to mask
-                                   (output * (1 - probability))
-                                   )
-        elif drop_type == 2:
-            self.output = T.switch(T.neq(train, 0),
-                                   output * T.cast(drop, theano.config.floatX),  # drop according to switch
-                                   (output * (1 - probability))
-                                   )
-        else:
-            self.output = output
+        self.output = T.switch(T.neq(train, 0),
+                               output * T.cast(mask, theano.config.floatX),     # drop according to mask
+                               (output * (1 - probability))
+                               )
 
         self.params = [self.W, self.b]

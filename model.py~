@@ -12,7 +12,7 @@ class Circuit(object):
     """
 
     def __init__(self, input, n_in, n_hidden_layer, n_hidden_node,
-                 train, probability, sparsity):
+                 train, drop_type, probability, drop, sparsity):
         """ Initialize
         :param input            : input
         :param n_in             : number of input features
@@ -22,6 +22,9 @@ class Circuit(object):
                                     1 - Train
                                     0 - Test
         :param probability      : dropping probability
+        :param drop             : drop flag
+                                    0 - Dropped
+                                    1 - Survived
         :param sparsity         : type of sparsity penalty
                                     1 - All layer
                                     2 - Penultimate layer
@@ -36,7 +39,9 @@ class Circuit(object):
                     n_in=n_in if index == 0 else n_hidden_node[index - 1],
                     n_out=n_hidden_node[index],
                     train=train,
-                    probability=probability
+                    drop_type=drop_type,
+                    probability=probability,
+                    drop=drop,
                 )
             )
 
@@ -67,7 +72,7 @@ class Circuit(object):
 
 class Model(object):
     def __init__(self, input, n_in, n_hidden_layer, n_hidden_node, n_circuit, n_out,
-                 train, probability,
+                 train, drop_type, probability, mask,
                  sparsity, varied_coef):
         """
         :param input            : input
@@ -77,7 +82,12 @@ class Model(object):
         :param n_circuit        : number of circuits
         :param n_out            : number of output class
         :param train            : train flag
+        :param drop_type        : type of dropout
+                                    1 - Node Dropout
+                                    2 - Drop Circuit
+                                    3 - None
         :param probability      : dropping probability
+        :param mask             : drop mask
         :param sparsity         : type of sparsity penalty
                                     1 - All layer
                                     2 - Penultimate layer
@@ -105,6 +115,8 @@ class Model(object):
                     n_hidden_node=[n / n_circuit for n in n_hidden_node],
                     n_in=n_in,  # sharing same input
                     train=train,
+                    drop_type=drop_type,
+                    drop=mask[index],
                     probability=probability,
                     sparsity=sparsity
                 )
@@ -147,7 +159,7 @@ class Model(object):
 def evaluate(dataset,
              n_hidden_node, n_circuit,
              learning_rate, n_epochs, momentum, batch_size,
-             probability,
+             drop_type, probability,
              sparsity, varied_coef
              ):
     """
@@ -158,6 +170,10 @@ def evaluate(dataset,
     :param n_epochs         : number of training epochs
     :param momentum         : momentum
     :param batch_size       : minibatch size
+    :param drop_type        : type of dropout
+                                1 - Node Dropout
+                                2 - Drop Circuit
+                                3 - None
     :param probability      : dropping probability
     :param sparsity         : type of sparsity penalty
                                 1 - All layer
@@ -190,6 +206,10 @@ def evaluate(dataset,
 
     train = T.iscalar()  # Dropout switch
 
+    # Create PC drop mask
+    srng = T.shared_randomstreams.RandomStreams()
+    mask = srng.binomial(n=1, p=1 - probability, size=(n_circuit,))
+
     # Initialize network
     classifier = Model(
         input=x,
@@ -199,6 +219,8 @@ def evaluate(dataset,
         n_circuit=n_circuit,
         n_out=10,
         train=train,
+        mask=mask,
+        drop_type=drop_type,
         probability=probability,
         sparsity=sparsity,
         varied_coef=varied_coef
@@ -263,6 +285,7 @@ def evaluate(dataset,
             x: train_set_x[index * batch_size: (index + 1) * batch_size],
             y: train_set_y[index * batch_size: (index + 1) * batch_size],
             train: numpy.cast['int32'](1),
+            mask: srng.binomial(n=1, p=1 - probability, size=(n_circuit,))  # regenerate the mask
         }
     )
 
@@ -311,7 +334,7 @@ def evaluate(dataset,
 
         # Display this epoch's stat
         print(
-            'epoch %i, train error %f %%, validation error %f, gradient %f' %
+            'epoch %i, train error %f %%, validation error %f, gradient %f %%' %
             (
                 epoch,
                 this_train_loss * 100.,
