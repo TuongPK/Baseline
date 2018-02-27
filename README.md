@@ -1,6 +1,7 @@
 ### PC Baseline
 
 ## Vanilla version of PC (MLP) - an ANN with modularity. 
+Corresponding to http://ieeexplore.ieee.org/abstract/document/7377956/
 
 ## Features:
   - Strictly based on MLP and the code from http://deeplearning.net/.
